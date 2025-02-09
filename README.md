@@ -74,6 +74,23 @@ A modern web application to view and sort your Steam wishlist with a clean inter
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Deployment
+
+This project is configured for automatic deployment to GitHub Pages. The deployment process is handled through GitHub Actions.
+
+### Setting up GitHub Pages deployment:
+
+1. Go to your repository's Settings > Pages
+2. Under "Build and deployment", select "GitHub Actions" as the source
+3. Add your Steam API key as a repository secret:
+   - Go to Settings > Secrets and variables > Actions
+   - Click "New repository secret"
+   - Name: `VITE_STEAM_API_KEY`
+   - Value: Your Steam API key
+4. Push to the `main` branch to trigger deployment
+
+The site will be available at: `https://[your-github-username].github.io/steam-wishlist/`
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
