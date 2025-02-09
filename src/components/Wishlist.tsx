@@ -1,44 +1,46 @@
-import { useState } from 'react';
-import { SteamUser, WishlistItem } from '../types/steam';
-import steamService from '../services/steamService';
-import { UserProfile } from './UserProfile';
-import { GameCard } from './GameCard';
+import { useState, useMemo} from "react";
+import { SteamUser, WishlistItem } from "../types/steam";
+import steamService from "../services/steamService";
+import { UserProfile } from "./UserProfile";
+import { GameCard } from "./GameCard";
 
-type SortOption = 'name' | 'price' | 'discount' | 'date_added' | 'release_date';
+type SortOption = "name" | "price" | "discount" | "date_added" | "release_date" | "rank";
 
 export const Wishlist = () => {
-  const [steamId, setSteamId] = useState('');
+  const [steamId, setSteamId] = useState("");
   const [user, setUser] = useState<SteamUser | null>(null);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [error, setError] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('date_added');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("rank");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
     setLoadingProgress(0);
     setWishlist([]);
     setUser(null);
-    
+
     try {
       const identifier = extractSteamIdentifier(steamId);
-      
+
       // Try to resolve vanity URL first if it's not a numeric ID
       let resolvedId = identifier;
       if (!identifier.match(/^\d+$/)) {
         try {
           resolvedId = await steamService.resolveVanityURL(identifier);
         } catch (err) {
-          setError('Could not resolve custom URL. Please try using your Steam ID instead.');
+          setError(
+            "Could not resolve custom URL. Please try using your Steam ID instead."
+          );
           setLoading(false);
           return;
         }
       }
-      
+
       // Get user info first
       const userInfo = await steamService.getUserInfo(resolvedId);
       setUser(userInfo);
@@ -54,7 +56,9 @@ export const Wishlist = () => {
       const wishlistArray = Object.values(wishlistData);
       setWishlist(wishlistArray);
     } catch (err) {
-      setError('Failed to fetch Steam data. Please check the Steam ID and try again.');
+      setError(
+        "Failed to fetch Steam data. Please check the Steam ID and try again."
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -71,8 +75,10 @@ export const Wishlist = () => {
     if (vanityUrlMatch) return vanityUrlMatch[1];
 
     // Handle custom URLs
-    const customUrlMatch = input.match(/steamcommunity\.com\/([^/]+)\/([^/?]+)/);
-    if (customUrlMatch && customUrlMatch[1] !== 'profiles') {
+    const customUrlMatch = input.match(
+      /steamcommunity\.com\/([^/]+)\/([^/?]+)/
+    );
+    if (customUrlMatch && customUrlMatch[1] !== "profiles") {
       return customUrlMatch[2];
     }
 
@@ -80,40 +86,70 @@ export const Wishlist = () => {
     return input.trim();
   };
 
-  const sortedWishlist = [...wishlist].sort((a, b) => {
-    let comparison = 0;
-    switch (sortBy) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case 'price':
-        const aPrice = a.price_info?.final || 0;
-        const bPrice = b.price_info?.final || 0;
-        comparison = aPrice - bPrice;
-        break;
-      case 'discount':
-        const aDiscount = a.price_info?.discount_percent || 0;
-        const bDiscount = b.price_info?.discount_percent || 0;
-        comparison = bDiscount - aDiscount;
-        break;
-      case 'date_added':
-        comparison = a.added - b.added;
-        break;
-      case 'release_date':
-        const aDate = new Date(a.release_date || '').getTime() || Number.MAX_SAFE_INTEGER;
-        const bDate = new Date(b.release_date || '').getTime() || Number.MAX_SAFE_INTEGER;
-        comparison = aDate - bDate;
-        break;
-      default:
-        return 0;
-    }
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
+  // Memoize the sorted wishlist
+  const sortedWishlist = useMemo(
+    () =>
+      [...wishlist].sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+          case "name":
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case "price":
+            const aPrice = a.price_info?.final || 0;
+            const bPrice = b.price_info?.final || 0;
+            comparison = aPrice - bPrice;
+            break;
+          case "discount":
+            const aDiscount = a.price_info?.discount_percent || 0;
+            const bDiscount = b.price_info?.discount_percent || 0;
+            comparison = bDiscount - aDiscount;
+            break;
+          case "date_added":
+            comparison = a.added - b.added;
+            break;
+          case "release_date":
+            const aDate =
+              new Date(a.release_date || "").getTime() ||
+              Number.MAX_SAFE_INTEGER;
+            const bDate =
+              new Date(b.release_date || "").getTime() ||
+              Number.MAX_SAFE_INTEGER;
+            comparison = aDate - bDate;
+            break;
+          case "rank":
+            // if priority is 0 it should be last (and use added instead)
+            // const aRank = a.priority === 0 ? a.added : a.priority;
+            // const bRank = b.priority === 0 ? b.added : b.priority;
+            if(a.name === "Crowsworn"){
+              console.log(a.priority, b.priority)
+            }
+            comparison = a.priority - b.priority
+            break
+          default:
+            return 0;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      }),
+    [wishlist, sortBy, sortDirection]
+  );
+
+  const list = useMemo(() => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {sortedWishlist.map((game) => (
+        <GameCard key={game.app_id} game={game} />
+      ))}
+    </div>
+    )
+  }, [sortedWishlist]);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-center mb-8 text-white">Steam Wishlist Viewer</h1>
-      
+      <h1 className="text-4xl font-bold text-center mb-8 text-white">
+        Steam Wishlist Viewer
+      </h1>
+
       <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-8">
         <div className="flex gap-2">
           <input
@@ -129,7 +165,7 @@ export const Wishlist = () => {
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Loading...' : 'View Wishlist'}
+            {loading ? "Loading..." : "View Wishlist"}
           </button>
         </div>
         {error && <p className="text-red-500 mt-2">{error}</p>}
@@ -152,7 +188,7 @@ export const Wishlist = () => {
       {user && (
         <>
           <UserProfile user={user} />
-          
+
           {wishlist.length > 0 && (
             <div className="mb-6 flex justify-end gap-4">
               <select
@@ -165,22 +201,26 @@ export const Wishlist = () => {
                 <option value="price">Sort by Price</option>
                 <option value="discount">Sort by Discount</option>
                 <option value="release_date">Sort by Release Date</option>
+                <option value="rank">Sort by Rank</option>
               </select>
 
               <button
-                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                onClick={() =>
+                  setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+                }
                 className="px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {sortDirection === 'asc' ? '↑' : '↓'}
+                {sortDirection === "asc" ? "↑" : "↓"}
               </button>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedWishlist.map((game) => (
               <GameCard key={game.app_id} game={game} />
             ))}
-          </div>
+          </div> */}
+          {list}
 
           {wishlist.length === 0 && !loading && (
             <p className="text-center text-gray-400">No items in wishlist</p>

@@ -1,21 +1,22 @@
-import { WishlistItem } from '../types/steam';
+import { memo } from "react";
+import { WishlistItem } from "../types/steam";
 
 interface GameCardProps {
   game: WishlistItem;
 }
 
-export const GameCard = ({ game }: GameCardProps) => {
+export const GameCard = memo(({ game }: GameCardProps) => {
   const { price_info } = game;
   const hasDiscount = price_info?.discount_percent > 0;
   const isFree = price_info?.final === 0;
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+    <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow contain-layout flex flex-col justify-between">
       <div className="relative">
         <img
           src={game.capsule}
           alt={game.name}
-          className="w-full h-48 object-cover"
+          className="w-full object-cover"
           loading="lazy"
         />
         {hasDiscount && (
@@ -24,10 +25,12 @@ export const GameCard = ({ game }: GameCardProps) => {
           </div>
         )}
       </div>
-      
-      <div className="p-4">
-        <h3 className="text-xl font-bold mb-2 text-white line-clamp-2">{game.name}</h3>
-        
+
+      <div className="p-4 flex flex-col justify-between flex-1">
+        <h3 className="text-xl font-bold mb-2 text-white line-clamp-2 flex-1">
+          {game.name}
+        </h3>
+
         <div className="flex items-center mb-2 space-x-2">
           {game.win && (
             <span className="text-gray-400">
@@ -48,10 +51,14 @@ export const GameCard = ({ game }: GameCardProps) => {
 
         <div className="text-sm text-gray-400 mb-2">
           {game.developers && game.developers.length > 0 && (
-            <div className="line-clamp-1">Developer: {game.developers.join(', ')}</div>
+            <div className="line-clamp-1">
+              Developer: {game.developers.join(", ")}
+            </div>
           )}
           {game.publishers && game.publishers.length > 0 && (
-            <div className="line-clamp-1">Publisher: {game.publishers.join(', ')}</div>
+            <div className="line-clamp-1">
+              Publisher: {game.publishers.join(", ")}
+            </div>
           )}
         </div>
 
@@ -59,17 +66,21 @@ export const GameCard = ({ game }: GameCardProps) => {
           <div className="flex items-center space-x-2">
             {game.review_score > 0 && (
               <div className="text-sm">
-                <span className={`${
-                  game.review_score >= 7 ? 'text-green-500' :
-                  game.review_score >= 5 ? 'text-yellow-500' :
-                  'text-red-500'
-                }`}>
+                <span
+                  className={`${
+                    game.review_score >= 7
+                      ? "text-green-500"
+                      : game.review_score >= 5
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                  }`}
+                >
                   {game.review_desc}
                 </span>
               </div>
             )}
           </div>
-          
+
           <div className="text-right">
             {isFree ? (
               <span className="text-green-500 font-bold">Free</span>
@@ -77,15 +88,18 @@ export const GameCard = ({ game }: GameCardProps) => {
               hasDiscount ? (
                 <div>
                   <span className="text-gray-400 line-through text-sm">
-                    {price_info.initial.toFixed(2)}{price_info.currency}
+                    {price_info.initial.toFixed(2)}
+                    {price_info.currency}
                   </span>
                   <span className="text-green-500 font-bold ml-2">
-                    {price_info.final.toFixed(2)}{price_info.currency}
+                    {price_info.final.toFixed(2)}
+                    {price_info.currency}
                   </span>
                 </div>
               ) : (
                 <span className="text-white font-bold">
-                  {price_info.final.toFixed(2)}{price_info.currency}
+                  {price_info.final.toFixed(2)}
+                  {price_info.currency}
                 </span>
               )
             ) : (
@@ -115,4 +129,6 @@ export const GameCard = ({ game }: GameCardProps) => {
       </div>
     </div>
   );
-};
+});
+
+GameCard.displayName = "GameCard";

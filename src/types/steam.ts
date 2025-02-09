@@ -54,7 +54,7 @@ export interface WishlistResponse {
 export interface WishlistEntry {
   appid: number;
   priority: number;
-  added: number;
+  date_added: number;
 }
 
 export interface StoreItemAssets {
@@ -62,6 +62,7 @@ export interface StoreItemAssets {
   small_capsule: string;
   header: string;
   library_capsule: string;
+  library_capsule_2x: string;
 }
 
 export interface StoreItemBasicInfo {

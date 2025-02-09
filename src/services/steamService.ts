@@ -1,7 +1,13 @@
-import axios from 'axios';
-import { SteamUser, WishlistResponse, WishlistEntry, StoreItem, WishlistItem } from '../types/steam';
+import axios from "axios";
+import {
+  SteamUser,
+  WishlistResponse,
+  WishlistEntry,
+  StoreItem,
+  WishlistItem,
+} from "../types/steam";
 
-const ITEMS_PER_PAGE = 100; // Maximum number of items to fetch at once
+const ITEMS_PER_PAGE = 50; // Maximum number of items to fetch at once
 
 // Create an axios instance
 const api = axios.create();
@@ -22,7 +28,7 @@ class SteamService {
       const response = await api.get(`/api/steam/user/${steamId}`);
       return response.data.response.players[0];
     } catch (error) {
-      console.error('Error fetching user info:', error);
+      console.error("Error fetching user info:", error);
       throw error;
     }
   }
@@ -33,24 +39,25 @@ class SteamService {
       const response = await api.get(`/api/steam/wishlist/${steamId}`);
 
       if (!response.data?.response?.items) {
-        console.error('Invalid wishlist response:', response.data);
-        throw new Error('Invalid wishlist response format');
+        console.error("Invalid wishlist response:", response.data);
+        throw new Error("Invalid wishlist response format");
       }
 
       return response.data.response.items;
     } catch (error) {
-      console.error('Error fetching wishlist entries:', error);
+      console.error("Error fetching wishlist entries:", error);
       throw error;
     }
   }
 
-  private async getStoreItems(appIds: number[]): Promise<StoreItem[]> {
+  private async getStoreItems(items: WishlistEntry[]): Promise<StoreItem[]> {
+    const appIds = items.map((entry) => entry.appid);
     try {
       // Get store data for all app IDs in a single request
-      const response = await api.get('/api/steam/store/appdetails', {
+      const response = await api.get("/api/steam/store/appdetails", {
         params: {
           input_json: JSON.stringify({
-            ids: appIds.map(appId => ({appid: appId})),
+            ids: items.map((item) => ({ appid: item.appid })),
             data_request: {
               include_basic_info: true,
               include_assets: true,
@@ -59,15 +66,15 @@ class SteamService {
               include_all_purchase_options: true,
             },
             context: {
-              language: 'english',
-              country_code: 'RO',
-            }
+              language: "english",
+              country_code: "RO",
+            },
           }),
-        }
+        },
       });
 
       if (!response.data?.response?.store_items) {
-        throw new Error('Invalid store items response format');
+        throw new Error("Invalid store items response format");
       }
 
       // Create a map of appId to store item for easier lookup
@@ -79,51 +86,62 @@ class SteamService {
 
       // Return store items in the same order as the input appIds
       return appIds
-        .map(appId => storeItemsMap.get(appId))
+        .map((appId) => storeItemsMap.get(appId))
         .filter((item): item is StoreItem => item !== undefined);
     } catch (error) {
-      console.error('Error fetching store items:', error);
+      console.error("Error fetching store items:", error);
       throw error;
     }
   }
 
-  private transformStoreItemToWishlistItem(item: StoreItem, entry: WishlistEntry): WishlistItem {
-    const assetBaseUrl = item.assets.asset_url_format.replace('${FILENAME}', item.assets.header);
+  private transformStoreItemToWishlistItem(
+    item: StoreItem,
+    entry?: WishlistEntry
+  ): WishlistItem {
+    const assetBaseUrl = item.assets.asset_url_format.replace(
+      "${FILENAME}",
+      item.assets.header
+    );
     const capsuleUrl = `https://shared.fastly.steamstatic.com/store_item_assets/${assetBaseUrl}`;
 
     return {
       name: item.name,
       capsule: capsuleUrl,
       review_score: 0, // Not available in this API
-      review_desc: '', // Not available in this API
-      reviews_total: '', // Not available in this API
+      review_desc: "", // Not available in this API
+      reviews_total: "", // Not available in this API
       reviews_percent: 0, // Not available in this API
-      release_date: item.release_date?.date || '',
-      release_string: item.release_date?.date || 'TBA',
-      platform_icons: '',
+      release_date: item.release_date?.date || "",
+      release_string: item.release_date?.date || "TBA",
+      platform_icons: "",
       subs: [],
-      type: 'game',
+      type: "game",
       screenshots: [],
-      review_css: '',
-      priority: entry.priority,
-      added: entry.added,
-      background: '',
+      review_css: "",
+      priority: entry?.priority || 0,
+      added: entry?.date_added || 0,
+      background: "",
       rank: 0,
       tags: [],
-      is_free_game: item.best_purchase_option?.final_price_in_cents === '0',
+      is_free_game: item.best_purchase_option?.final_price_in_cents === "0",
       win: item.platforms?.windows || false,
       mac: item.platforms?.mac || false,
       linux: item.platforms?.linux || false,
       app_id: item.appid,
       store_url: `https://store.steampowered.com/${item.store_url_path}`,
       price_info: {
-        initial: parseInt(item.best_purchase_option?.final_price_in_cents || '0') / 100,
-        final: parseInt(item.best_purchase_option?.final_price_in_cents || '0') / 100,
+        initial:
+          parseInt(item.best_purchase_option?.final_price_in_cents || "0") /
+          100,
+        final:
+          parseInt(item.best_purchase_option?.final_price_in_cents || "0") /
+          100,
         discount_percent: item.best_purchase_option?.discount_pct || 0,
-        currency: item.best_purchase_option?.formatted_final_price?.slice(-1) || '€'
+        currency:
+          item.best_purchase_option?.formatted_final_price?.slice(-1) || "€",
       },
-      developers: item.basic_info.developers.map(dev => dev.name),
-      publishers: item.basic_info.publishers.map(pub => pub.name)
+      developers: item.basic_info.developers.map((dev) => dev.name),
+      publishers: item.basic_info.publishers.map((pub) => pub.name),
     };
   }
 
@@ -137,32 +155,39 @@ class SteamService {
       const wishlistResponse: WishlistResponse = {};
       const totalEntries = entries.length;
 
+      const entriesMap = new Map(entries.map((entry) => [entry.appid, entry]));
+
       // Process entries in chunks to avoid overloading the API
       for (let i = 0; i < entries.length; i += ITEMS_PER_PAGE) {
         const chunk = entries.slice(i, i + ITEMS_PER_PAGE);
-        const appIds = chunk.map(entry => entry.appid);
-        const storeItems = await this.getStoreItems(appIds);
+        const storeItems = await this.getStoreItems(chunk);
 
         // Combine wishlist entries with store items
-        storeItems.forEach((item, index) => {
-          const entry = chunk[index];
-          const appId = entry.appid.toString();
-          wishlistResponse[appId] = this.transformStoreItemToWishlistItem(item, entry);
+        storeItems.forEach((item) => {
+          const entry = entriesMap.get(item.appid);
+          const appId = item.appid.toString();
+          wishlistResponse[appId] = this.transformStoreItemToWishlistItem(
+            item,
+            entry
+          );
         });
 
         // Update progress
-        const progress = Math.min(((i + chunk.length) / totalEntries) * 100, 100);
+        const progress = Math.min(
+          ((i + chunk.length) / totalEntries) * 100,
+          100
+        );
         onProgress?.(progress);
 
         // Add a small delay between chunks to be nice to the API
         if (i + ITEMS_PER_PAGE < entries.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
       }
 
       return wishlistResponse;
     } catch (error) {
-      console.error('Error fetching wishlist:', error);
+      console.error("Error fetching wishlist:", error);
       throw error;
     }
   }
@@ -173,9 +198,9 @@ class SteamService {
       if (response.data.response.success === 1) {
         return response.data.response.steamid;
       }
-      throw new Error('Could not resolve vanity URL');
+      throw new Error("Could not resolve vanity URL");
     } catch (error) {
-      console.error('Error resolving vanity URL:', error);
+      console.error("Error resolving vanity URL:", error);
       throw error;
     }
   }
