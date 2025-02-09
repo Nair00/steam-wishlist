@@ -97,4 +97,13 @@ export interface StoreItem {
     coming_soon: boolean;
     date: string;
   };
+  screenshots?: {
+    all_ages_screenshots: Array<ScreenshotItem>;
+    mature_content_screenshots: Array<ScreenshotItem>;
+  };
+}
+
+export interface ScreenshotItem {
+  filename: string;
+  ordinal: number;
 }

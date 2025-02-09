@@ -14,7 +14,12 @@ const api = axios.create();
 
 class SteamService {
   private static instance: SteamService;
-  private constructor() {}
+  private apiKey: string | null = null;
+
+  private constructor() {
+    // Try to load API key from localStorage
+    this.apiKey = localStorage.getItem("steamApiKey");
+  }
 
   static getInstance(): SteamService {
     if (!this.instance) {
@@ -23,9 +28,24 @@ class SteamService {
     return this.instance;
   }
 
+  setApiKey(key: string) {
+    this.apiKey = key;
+    localStorage.setItem("steamApiKey", key);
+  }
+
+  getApiKey(): string | null {
+    return this.apiKey;
+  }
+
   async getUserInfo(steamId: string): Promise<SteamUser> {
+    if (!this.apiKey) {
+      throw new Error("API_KEY_REQUIRED");
+    }
+
     try {
-      const response = await api.get(`/api/steam/user/${steamId}`);
+      const response = await api.get(`/api/steam/user/${steamId}`, {
+        params: { key: this.apiKey },
+      });
       return response.data.response.players[0];
     } catch (error) {
       console.error("Error fetching user info:", error);
@@ -36,7 +56,9 @@ class SteamService {
   private async getWishlistEntries(steamId: string): Promise<WishlistEntry[]> {
     try {
       // Get the wishlist data from IWishlistService through our proxy
-      const response = await api.get(`/api/steam/wishlist/${steamId}`);
+      const response = await api.get(`/api/steam/wishlist/${steamId}`, {
+        params: { key: this.apiKey },
+      });
 
       if (!response.data?.response?.items) {
         console.error("Invalid wishlist response:", response.data);
@@ -56,6 +78,7 @@ class SteamService {
       // Get store data for all app IDs in a single request
       const response = await api.get("/api/steam/store/appdetails", {
         params: {
+          key: this.apiKey,
           input_json: JSON.stringify({
             ids: items.map((item) => ({ appid: item.appid })),
             data_request: {
@@ -64,6 +87,7 @@ class SteamService {
               include_platforms: true,
               include_release: true,
               include_all_purchase_options: true,
+              include_screenshots: true,
             },
             context: {
               language: "english",
@@ -116,7 +140,13 @@ class SteamService {
       platform_icons: "",
       subs: [],
       type: "game",
-      screenshots: [],
+      screenshots:
+        item.screenshots?.all_ages_screenshots
+          ?.slice(0, 4)
+          .map(
+            (s) =>
+              `https://shared.fastly.steamstatic.com/store_item_assets/${s.filename}.jpg`
+          ) || [],
       review_css: "",
       priority: entry?.priority || 0,
       added: entry?.date_added || 0,
@@ -129,7 +159,7 @@ class SteamService {
       linux: item.platforms?.linux || false,
       app_id: item.appid,
       store_url: `https://store.steampowered.com/${item.store_url_path}`,
-      price_info: {
+      price_info: item.best_purchase_option && {
         initial:
           parseInt(item.best_purchase_option?.final_price_in_cents || "0") /
           100,
@@ -194,7 +224,9 @@ class SteamService {
 
   async resolveVanityURL(vanityURL: string): Promise<string> {
     try {
-      const response = await api.get(`/api/steam/resolve/${vanityURL}`);
+      const response = await api.get(`/api/steam/resolve/${vanityURL}`, {
+        params: { key: this.apiKey },
+      });
       if (response.data.response.success === 1) {
         return response.data.response.steamid;
       }

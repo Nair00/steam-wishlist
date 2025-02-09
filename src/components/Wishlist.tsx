@@ -1,13 +1,24 @@
-import { useState, useMemo} from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SteamUser, WishlistItem } from "../types/steam";
 import steamService from "../services/steamService";
 import { UserProfile } from "./UserProfile";
 import { GameCard } from "./GameCard";
+import { ApiKeyModal } from "./ApiKeyModal";
 
-type SortOption = "name" | "price" | "discount" | "date_added" | "release_date" | "rank";
+type SortOption =
+  | "name"
+  | "price"
+  | "discount"
+  | "date_added"
+  | "release_date"
+  | "rank";
 
 export const Wishlist = () => {
-  const [steamId, setSteamId] = useState("");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(!steamService.getApiKey());
+  const [steamId, setSteamId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("steamId") || "";
+  });
   const [user, setUser] = useState<SteamUser | null>(null);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -16,8 +27,36 @@ export const Wishlist = () => {
   const [sortBy, setSortBy] = useState<SortOption>("rank");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Effect to handle initial load from URL
+  useEffect(() => {
+    if (steamId) {
+      handleSearch();
+    }
+  }, []); // Run only once on mount
+
+  const handleApiKeySubmit = (apiKey: string) => {
+    steamService.setApiKey(apiKey);
+    setShowApiKeyModal(false);
+    if (steamId) {
+      handleSearch();
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!steamService.getApiKey()) {
+      setShowApiKeyModal(true);
+      return;
+    }
+
+    // Update URL with current steamId
+    const params = new URLSearchParams(window.location.search);
+    params.set("steamId", steamId);
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${params.toString()}`
+    );
+
     setLoading(true);
     setError("");
     setLoadingProgress(0);
@@ -59,10 +98,19 @@ export const Wishlist = () => {
       setError(
         "Failed to fetch Steam data. Please check the Steam ID and try again."
       );
-      console.error(err);
+      if (err instanceof Error && err.message === "API_KEY_REQUIRED") {
+        setShowApiKeyModal(true);
+      } else {
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSearch();
   };
 
   const extractSteamIdentifier = (input: string): string => {
@@ -96,8 +144,10 @@ export const Wishlist = () => {
             comparison = a.name.localeCompare(b.name);
             break;
           case "price":
-            const aPrice = a.price_info?.final || 0;
-            const bPrice = b.price_info?.final || 0;
+            const nullPrice =
+              sortDirection === "asc" ? Number.MAX_SAFE_INTEGER : 0;
+            const aPrice = a.price_info?.final || nullPrice;
+            const bPrice = b.price_info?.final || nullPrice;
             comparison = aPrice - bPrice;
             break;
           case "discount":
@@ -118,14 +168,8 @@ export const Wishlist = () => {
             comparison = aDate - bDate;
             break;
           case "rank":
-            // if priority is 0 it should be last (and use added instead)
-            // const aRank = a.priority === 0 ? a.added : a.priority;
-            // const bRank = b.priority === 0 ? b.added : b.priority;
-            if(a.name === "Crowsworn"){
-              console.log(a.priority, b.priority)
-            }
-            comparison = a.priority - b.priority
-            break
+            comparison = a.priority - b.priority;
+            break;
           default:
             return 0;
         }
@@ -137,15 +181,16 @@ export const Wishlist = () => {
   const list = useMemo(() => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {sortedWishlist.map((game) => (
-        <GameCard key={game.app_id} game={game} />
-      ))}
-    </div>
-    )
+        {sortedWishlist.map((game) => (
+          <GameCard key={game.app_id} game={game} />
+        ))}
+      </div>
+    );
   }, [sortedWishlist]);
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {showApiKeyModal && <ApiKeyModal onSubmit={handleApiKeySubmit} />}
       <h1 className="text-4xl font-bold text-center mb-8 text-white">
         Steam Wishlist Viewer
       </h1>
@@ -215,11 +260,6 @@ export const Wishlist = () => {
             </div>
           )}
 
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedWishlist.map((game) => (
-              <GameCard key={game.app_id} game={game} />
-            ))}
-          </div> */}
           {list}
 
           {wishlist.length === 0 && !loading && (

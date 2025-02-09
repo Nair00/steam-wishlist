@@ -1,4 +1,5 @@
-import { memo } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
+import { ScreenshotPreview } from "./ScreenshotPreview";
 import { WishlistItem } from "../types/steam";
 
 interface GameCardProps {
@@ -6,19 +7,56 @@ interface GameCardProps {
 }
 
 export const GameCard = memo(({ game }: GameCardProps) => {
+  const [showScreenshots, setShowScreenshots] = useState(false);
+  const timeoutRef = useRef<number | undefined>(undefined);
   const { price_info } = game;
+  if(game.app_id === 1030300){
+    console.log(game);
+  }
   const hasDiscount = price_info?.discount_percent > 0;
   const isFree = price_info?.final === 0;
 
+  const handleMouseEnter = useCallback(() => {
+    timeoutRef.current = window.setTimeout(() => {
+      setShowScreenshots(true);
+    }, 200);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setShowScreenshots(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow contain-layout flex flex-col justify-between">
-      <div className="relative">
+      <div 
+        className="relative group"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <img
           src={game.capsule}
           alt={game.name}
           className="w-full object-cover"
           loading="lazy"
         />
+        {game.screenshots.length > 0 && (
+          <ScreenshotPreview
+            screenshots={game.screenshots}
+            isVisible={showScreenshots}
+            headerImage={game.capsule}
+          />
+        )}
         {hasDiscount && (
           <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded">
             -{price_info.discount_percent}%
