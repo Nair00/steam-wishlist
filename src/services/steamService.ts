@@ -9,8 +9,10 @@ import {
 
 const ITEMS_PER_PAGE = 50; // Maximum number of items to fetch at once
 
-// Create an axios instance
-const api = axios.create();
+// Create an axios instance with the correct base URL
+const api = axios.create({
+  baseURL: import.meta.env.BASE_URL,
+});
 
 class SteamService {
   private static instance: SteamService;
