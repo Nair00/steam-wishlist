@@ -6,7 +6,7 @@ import { resolve } from "path";
 export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
-    base: mode === "production" ? "/steam-wishlist/" : "/",
+    base: mode === "production" ? "/" : "/",
     build: {
       outDir: "dist",
       rollupOptions: {
