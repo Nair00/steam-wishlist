@@ -4,10 +4,12 @@ import axios from "axios";
 const handler = async (request: VercelRequest, response: VercelResponse) => {
   const { steamId } = request.query;
   const key = request.query.key as string;
+  console.log("steamId", steamId);
 
   if (!key) {
     return response.status(400).json({ error: "API key is required" });
   }
+  console.log("key", "TEST");
 
   try {
     const steamResponse = await axios.get(
