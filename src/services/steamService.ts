@@ -12,7 +12,7 @@ const ITEMS_PER_PAGE = 50; // Maximum number of items to fetch at once
 // Create an axios instance with the correct base URL
 const api = axios.create({
   baseURL: import.meta.env.PROD
-    ? `https://${import.meta.env.VERCEL_URL}`
+    ? window.location.origin
     : "http://localhost:3000",
 });
 
