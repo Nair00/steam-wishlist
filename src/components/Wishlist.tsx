@@ -168,7 +168,10 @@ export const Wishlist = () => {
             comparison = aDate - bDate;
             break;
           case "rank":
-            comparison = a.priority - b.priority;
+            const nullRank = sortDirection === "asc" ? Number.MAX_SAFE_INTEGER : 0;
+            const aRank = a.priority || nullRank;
+            const bRank = b.priority || nullRank;
+            comparison = aRank - bRank;
             break;
           default:
             return 0;
