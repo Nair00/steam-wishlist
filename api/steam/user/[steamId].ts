@@ -1,13 +1,20 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type {
+  VercelRequest,
+  VercelResponse,
+  VercelApiHandler,
+} from "@vercel/node";
 import axios from "axios";
 
-const handler = async (request: VercelRequest, response: VercelResponse) => {
+const handler: VercelApiHandler = async (request, response) => {
+  console.log("API endpoint called with steamId:", request.query.steamId);
+  console.log("steamIdaaa");
   const { steamId } = request.query;
   const key = request.query.key as string;
   console.log("steamId", steamId);
 
   if (!key) {
-    return response.status(400).json({ error: "API key is required" });
+    response.status(400).json({ error: "API key is required" });
+    return;
   }
   console.log("key", "TEST");
 
@@ -22,7 +29,8 @@ const handler = async (request: VercelRequest, response: VercelResponse) => {
       }
     );
 
-    return response.status(200).json(steamResponse.data);
+    response.status(200).json(steamResponse.data);
+    return;
   } catch (error) {
     console.error("Steam API error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
@@ -40,18 +48,20 @@ const handler = async (request: VercelRequest, response: VercelResponse) => {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status || 500;
       const message = error.response?.data?.message || error.message;
-      return response.status(status).json({
+      response.status(status).json({
         error: "Steam API request failed",
         details: message,
         statusCode: status,
       });
+      return;
     }
 
-    return response.status(500).json({
+    response.status(500).json({
       error: "Failed to fetch user data",
       details:
         error instanceof Error ? error.message : "Unknown error occurred",
     });
+    return;
   }
 };
 
