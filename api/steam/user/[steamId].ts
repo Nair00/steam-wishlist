@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import axios from "axios";
 
 const handler = async (request: VercelRequest, response: VercelResponse) => {
+  console.log("steamIdaaa");
   const { steamId } = request.query;
   const key = request.query.key as string;
   console.log("steamId", steamId);
