@@ -11,7 +11,9 @@ const ITEMS_PER_PAGE = 50; // Maximum number of items to fetch at once
 
 // Create an axios instance with the correct base URL
 const api = axios.create({
-  baseURL: import.meta.env.BASE_URL,
+  baseURL: import.meta.env.PROD
+    ? "https://steam-wishlist.vercel.app"
+    : "http://localhost:3000",
 });
 
 class SteamService {
