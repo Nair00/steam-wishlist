@@ -2,15 +2,8 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "routes": [
-    {
-      "src": "/api/steam/(.*)",
-      "dest": "/api/steam/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+  "rewrites": [
+    { "source": "/api/steam/:path*", "destination": "/api/steam/:path*" }
   ],
   "headers": [
     {
