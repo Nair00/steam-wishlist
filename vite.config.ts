@@ -6,8 +6,7 @@ import { resolve } from "path";
 export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
-    base:
-      mode === "production" ? "https://steam-wishlist-neon.vercel.app" : "/",
+    base: mode === "production" ? "/" : "/",
     build: {
       outDir: "dist",
       rollupOptions: {
