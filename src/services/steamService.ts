@@ -47,9 +47,11 @@ class SteamService {
     }
 
     try {
+      console.log("steamId", steamId);
       const response = await api.get(`/api/steam/user/${steamId}`, {
         params: { key: this.apiKey },
       });
+      console.log("response", response);
       return response.data.response.players[0];
     } catch (error) {
       console.error("Error fetching user info:", error);

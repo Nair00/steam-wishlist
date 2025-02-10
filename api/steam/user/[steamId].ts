@@ -1,16 +1,15 @@
-import { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import axios from "axios";
 
-export default async function handler(
-  request: VercelRequest,
-  response: VercelResponse
-) {
+const handler = async (request: VercelRequest, response: VercelResponse) => {
   const { steamId } = request.query;
   const key = request.query.key as string;
+  console.log("steamId", steamId);
 
   if (!key) {
     return response.status(400).json({ error: "API key is required" });
   }
+  console.log("key", "TEST");
 
   try {
     const steamResponse = await axios.get(
@@ -54,4 +53,6 @@ export default async function handler(
         error instanceof Error ? error.message : "Unknown error occurred",
     });
   }
-}
+};
+
+export default handler;
