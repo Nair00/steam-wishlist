@@ -1,10 +1,7 @@
-import { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import axios from "axios";
 
-export default async function handler(
-  request: VercelRequest,
-  response: VercelResponse
-) {
+const handler = async (request: VercelRequest, response: VercelResponse) => {
   const { steamId } = request.query;
   const key = request.query.key as string;
 
@@ -54,4 +51,6 @@ export default async function handler(
         error instanceof Error ? error.message : "Unknown error occurred",
     });
   }
-}
+};
+
+export default handler;
